@@ -1,0 +1,43 @@
+{
+  "wifi": {
+    "enabled": true,
+    "networks": [
+      {
+		"enabled": true,
+        "ssid": "your_ssid_1",
+        "password": "your_password_1"
+      },
+      {
+		"enabled": false,
+        "ssid": "your_ssid_2",
+        "password": "your_password_2"
+      }
+    ]
+  },
+  "yolo": {
+    "enabled": true,
+    "kmodel_path": "/sdcard/models/yolov8.kmodel",
+    "labels": ["person", "bicycle", "car"],
+    "rgb888p_size": [640, 480],
+    "model_input_size": [320, 320],
+    "display_size": [640, 480],
+    "conf_thresh": 0.5,
+    "nms_thresh": 0.4,
+    "max_boxes_num": 100,
+    "debug_mode": false
+  },
+  "mqtt": {
+    "enabled": true,
+    "broker": "your_broker_address",
+    "port": 1883,
+    "topic_detection": "/yolo/detection",
+    "client_id": "yolo_client",
+    "username": "your_username",
+    "password": "your_password"
+  },
+  "ntptime": {
+    "enabled": true,
+    "ntp_delta": 3155644800,
+    "host": "ntp6.aliyun.com"
+  }
+}

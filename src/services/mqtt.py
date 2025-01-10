@@ -1,6 +1,6 @@
 import json
 from libs.umqtt.simple import MQTTClient
-from services.utils.log import write_log
+from src.services.utils import logging
 
 LOGNAME = "mqtt"
 
@@ -33,16 +33,16 @@ class MQTTPublish:
             # 连接到 MQTT 代理服务器
             self.client.connect()
             self.is_connected = True
-            write_log(f"Connected to MQTT broker: {self.broker}", log_name=LOGNAME)
+            logging(f"Connected to MQTT broker: {self.broker}", log_name=LOGNAME)
             return True
         except Exception as e:
-            write_log(f"Error connecting to MQTT broker: {e}", log_name=LOGNAME)
+            logging(f"Error connecting to MQTT broker: {e}", log_name=LOGNAME)
             return False
 
     def publish(self, topic, message):
         """发布消息到指定的主题"""
         if not self.is_connected:
-            write_log(
+            logging(
                 f"MQTT not connected. Unable to publish to {topic}", log_name=LOGNAME
             )
             return
@@ -50,14 +50,14 @@ class MQTTPublish:
         try:
             # 发布消息，umqtt.simple 采用的是 publish(topic, msg)
             self.client.publish(topic, message)
-            write_log(f"Message published to {topic}", log_name=LOGNAME)
+            logging(f"Message published to {topic}", log_name=LOGNAME)
         except Exception as e:
-            write_log(f"Error publishing message to {topic}: {e}", log_name=LOGNAME)
+            logging(f"Error publishing message to {topic}: {e}", log_name=LOGNAME)
 
     def subscribe(self, topic):
         """订阅一个 MQTT 主题"""
         if not self.is_connected:
-            write_log(
+            logging(
                 f"MQTT not connected. Unable to subscribe to {topic}", log_name=LOGNAME
             )
             return
@@ -65,14 +65,14 @@ class MQTTPublish:
         try:
             # 订阅主题，umqtt.simple 采用的是 subscribe(topic)
             self.client.subscribe(topic)
-            write_log(f"Subscribed to topic: {topic}", log_name=LOGNAME)
+            logging(f"Subscribed to topic: {topic}", log_name=LOGNAME)
         except Exception as e:
-            write_log(f"Error subscribing to {topic}: {e}", log_name=LOGNAME)
+            logging(f"Error subscribing to {topic}: {e}", log_name=LOGNAME)
 
     def unsubscribe(self, topic):
         """取消订阅一个 MQTT 主题"""
         if not self.is_connected:
-            write_log(
+            logging(
                 f"MQTT not connected. Unable to unsubscribe from {topic}",
                 log_name=LOGNAME,
             )
@@ -81,37 +81,26 @@ class MQTTPublish:
         try:
             # 取消订阅主题，umqtt.simple 采用的是 unsubscribe(topic)
             self.client.unsubscribe(topic)
-            write_log(f"Unsubscribed from topic: {topic}", log_name=LOGNAME)
+            logging(f"Unsubscribed from topic: {topic}", log_name=LOGNAME)
         except Exception as e:
-            write_log(f"Error unsubscribing from {topic}: {e}", log_name=LOGNAME)
+            logging(f"Error unsubscribing from {topic}: {e}", log_name=LOGNAME)
 
     def disconnect(self):
         """断开 MQTT 连接"""
         if self.is_connected:
             self.client.disconnect()
             self.is_connected = False
-            write_log("Disconnected from MQTT broker", log_name=LOGNAME)
+            logging("Disconnected from MQTT broker", log_name=LOGNAME)
         else:
-            write_log("MQTT not connected. Unable to disconnect.", log_name=LOGNAME)
+            logging("MQTT not connected. Unable to disconnect.", log_name=LOGNAME)
 
     def loop(self):
         """执行 MQTT 客户端的循环，保持与代理的连接"""
         try:
             self.client.wait_msg()  # 阻塞，等待消息
         except Exception as e:
-            write_log(f"Error in MQTT loop: {e}", log_name=LOGNAME)
+            logging(f"Error in MQTT loop: {e}", log_name=LOGNAME)
 
     def on_message(self, topic, msg):
         """收到消息时的回调函数"""
-        write_log(f"Received message: {msg} on topic: {topic}", log_name=LOGNAME)
-
-
-def load_mqtt_config():
-    """读取 MQTT 配置"""
-    try:
-        with open("/sdcard/config/mqtt_config.json", "r") as f:
-            config = json.load(f)
-            return config
-    except OSError as e:
-        write_log(f"Error reading MQTT config: {e}", log_name=LOGNAME)
-        return None
+        logging(f"Received message: {msg} on topic: {topic}", log_name=LOGNAME)

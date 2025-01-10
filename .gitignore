@@ -204,8 +204,6 @@ poetry.toml
 # ruff
 .ruff_cache/
 
-# LSP config files
-pyrightconfig.json
 
 ### VisualStudioCode ###
 .vscode/*
@@ -236,3 +234,4 @@ config/wifi_config.csv
 config/yolo.json
 config/mqtt_config.json
 .ampy
+.config.json

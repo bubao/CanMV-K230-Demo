@@ -1,0 +1,8 @@
+{
+    "broker": "192.168.0.3",
+    "port": 1883,
+    "topic_detection": "yolo/detection",
+    "client_id": "CanMV_k230_yolo_001",
+    "username": "who",
+    "password": "me"
+}

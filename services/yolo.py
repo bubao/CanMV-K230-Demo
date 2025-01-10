@@ -1,14 +1,11 @@
 from libs.YOLO import YOLOv8
-from libs.PipeLine import PipeLine, ScopedTiming
-import time, os, sys
-import ulab.numpy as np
-import image
+from libs.PipeLine import PipeLine
+import time, os
 import time
 import ujson
 import gc
 import utime
 
-# from libs.Utils import *
 from media.sensor import *
 from media.display import *
 from media.media import *
@@ -23,8 +20,74 @@ from services.mqtt import MQTTPublish
 from services.utils.config import load_config
 
 
+def initialize_pipeline(CONFIG):
+    """初始化显示管道"""
+    pl = PipeLine(
+        rgb888p_size=CONFIG["rgb888p_size"],
+        display_size=CONFIG["display_size"],
+        display_mode=CONFIG["display_mode"],
+    )
+    pl.create()
+    return pl
+
+
+def initialize_yolo(CONFIG):
+    """初始化 YOLO 模型"""
+    yolo = YOLOv8(
+        task_type="detect",
+        mode="video",
+        kmodel_path=CONFIG["kmodel_path"],
+        labels=CONFIG["labels"],
+        rgb888p_size=CONFIG["rgb888p_size"],
+        model_input_size=CONFIG["model_input_size"],
+        display_size=CONFIG["display_size"],
+        conf_thresh=CONFIG["conf_thresh"],
+        nms_thresh=CONFIG["nms_thresh"],
+        max_boxes_num=CONFIG["max_boxes_num"],
+        debug_mode=CONFIG["debug_mode"],
+    )
+    yolo.config_preprocess()
+    return yolo
+
+
+def process_frame(yolo, pl, CONFIG):
+    """处理当前帧，返回检测结果和物体数量"""
+    img = pl.get_frame()
+    if img is None:
+        write_log("Unable to capture frame.")
+        return [], 0
+    result = yolo.run(img)
+    write_log(f"YOLO run result: {result}", log_name=LOGNAME)  # 添加日志记录返回值
+
+    # 解析结果
+    if len(result) == 0:
+        return [], 0
+
+    detections = []
+    for item in result:
+        detection = {
+            "label": CONFIG["labels"][int(item[5])],
+            "label_id": int(item[5]),
+            "confidence": float(item[4]),
+            "bbox": [float(item[0]), float(item[1]), float(item[2]), float(item[3])],
+        }
+        detections.append(detection)
+    score = (
+        sum([d["confidence"] for d in detections]) / len(detections)
+        if detections
+        else 0
+    )
+    return detections, score
+
+
+def calculate_cycle_result(cycle_data, frame_index):
+    """统计周期内物体数量的众数"""
+    if frame_index == 0:
+        return 0
+    return max(set(cycle_data[:frame_index]), key=cycle_data[:frame_index].count)
+
+
 def run_yolo_and_publish_data():
-    os.exitpoint(os.EXITPOINT_ENABLE)
     try:
         # 加载配置文件
         yolo_config = load_config("/sdcard/config/yolo.json")
@@ -38,106 +101,62 @@ def run_yolo_and_publish_data():
             return
 
         # 初始化MQTT客户端
-        # mqtt_client = MQTTPublish(mqtt_config)
-        # ret = mqtt_client.connect()
-        # if ret is False:
-        #     return
+        mqtt_client = MQTTPublish(mqtt_config)
+        ret = mqtt_client.connect()
+        if ret is False:
+            return
 
-        kmodel_path = yolo_config["kmodel_path"]
-        labels = yolo_config["labels"]
-        rgb888p_size = yolo_config["rgb888p_size"]
-        model_input_size = yolo_config["model_input_size"]
-        # display_size = yolo_config["display_size"]
-        conf_thresh = yolo_config["conf_thresh"]
-        nms_thresh = yolo_config["nms_thresh"]
-        max_boxes_num = yolo_config["max_boxes_num"]
+        topic_detection = mqtt_config["topic_detection"]
 
-        # # 初始化YOLOv8模型
-        # yolo = YOLOv8(
-        #     task_type="detect",
-        #     mode="image",
-        #     kmodel_path=kmodel_path,
-        #     labels=labels,
-        #     rgb888p_size=rgb888p_size,
-        #     model_input_size=model_input_size,
-        #     conf_thresh=conf_thresh,
-        #     nms_thresh=nms_thresh,
-        #     max_boxes_num=max_boxes_num,
-        #     debug_mode=1,
-        # )
-        # yolo.config_preprocess()
+        pl = initialize_pipeline(yolo_config)
 
-        # topic_detection = mqtt_config["topic_detection"]
-        # sensor = Sensor(id=sensor_id)
-        # sensor.reset()
-        # sensor.set_framesize(framesize=Sensor.B320X320, chn=CAM_CHN_ID_0)
-        # sensor.set_pixformat(Sensor.RGB888, chn=CAM_CHN_ID_0)
-        # # Display.init(Display.VIRT, width=1920, height=1080, to_ide=False)
-        # # MediaManager.init()
-        # sensor.run()
-        # clock = utime.clock()
-        # fps = 0
-        # while True:
-        #     os.exitpoint()
-        #     # with ScopedTiming("total", 1):
-        #     # img = sensor.snapshot(chn=CAM_CHN_ID_0)
-        #     res = None
-        #     # try:
-        #     #     print(
-        #     #         f"Captured image size: {img.width}x{img.height}, Format: {img.format}"
-        #     #     )
+        yolo = initialize_yolo(yolo_config)
 
-        #     #     # 转换图像为 numpy 数组
-        #     #     np_img = np.array(img)
+        clock = utime.clock()
+        fps = 0
+        last_time = utime.time()
+        while True:
+            os.exitpoint()
+            current_time = utime.time()
+            if current_time - last_time >= 1:  # 每秒处理一帧
+                last_time = current_time
+                clock.tick()
+                res, score = process_frame(yolo, pl, yolo_config)
+                fps = clock.fps()
 
-        #     #     # 使用 ulab 的方法来调整大小（例如通过重采样）
-        #     #     # 这将需要更多的计算资源，但可以提供更高的灵活性
-        #     #     np_resized = np_img.resize((320, 320))  # 假设有 resize 方法支持
+                # 处理推理结果，准备发送到 MQTT
+                detection_data = []
+                if not res or len(res) == 0:
+                    # write_log(f"No detections in this frame.{fps}", log_name=LOGNAME)
+                    pass
+                else:
+                    for item in res:
+                        obj = {
+                            "label": item["label"],
+                            "confidence": item["confidence"],
+                            "bbox": item["bbox"],
+                            "fps": float(fps),
+                            "score": float(score),
+                        }
+                        detection_data.append(obj)
 
-        #     #     # 将处理后的数组转换回图像对象
-        #     #     img_resized = image.Image.from_bytes(np_resized)
-        #     #     clock.tick()
-        #     #     # res, score = yolo.run(img_resized)
-        #     #     fps = clock.fps()
-        #     # except Exception as e:
-        #     #     write_log(f"Error during YOLO run: {e}", log_name=LOGNAME)
-        #     #     continue
-
-        #     # 处理推理结果，准备发送到 MQTT
-        #     detection_data = []
-        #     if not res:
-        #         write_log(f"No detections in this frame.{fps}", log_name=LOGNAME)
-        #     else:
-        #         print("res")
-        #         for item in res:
-        #             obj = {
-        #                 "label": item["label"],
-        #                 "confidence": item["confidence"],
-        #                 "bbox": item["bbox"],
-        #                 "fps": float(fps),
-        #                 "score": float(score),
-        #             }
-        #             detection_data.append(obj)
-
-        #         # 上报数据到 MQTT
-        #         str_data = ujson.dumps(detection_data)
-        #         write_log(
-        #             f"send topic {topic_detection} data: {str_data}",
-        #             log_name=LOGNAME,
-        #         )
-        #         mqtt_client.publish(topic_detection, str_data)
-        #         gc.collect()
+                    # 上报数据到 MQTT
+                    str_data = ujson.dumps(detection_data)
+                    write_log(
+                        f"send topic {topic_detection} data: {str_data}",
+                        log_name=LOGNAME,
+                    )
+                    mqtt_client.publish(topic_detection, str_data)
+                    gc.collect()
     except KeyboardInterrupt as e:
         print("用户停止: ", e)
     except BaseException as e:
         print(f"异常: {e}")
     finally:
-        # 停止传感器运行
-        # if isinstance(sensor, Sensor):
-        #     sensor.stop()
-        #     sensor.deinit()
-        # mqtt_client.disconnect()
-        os.exitpoint(os.EXITPOINT_ENABLE_SLEEP)
+        mqtt_client.disconnect()  # 断开MQTT连接
+        yolo.deinit()  # 销毁YOLO模型
+        pl.destroy()  # 销毁显示管道
+        os.exitpoint(os.EXITPOINT_ENABLE_SLEEP)  # 使能休眠
         time.sleep_ms(100)
         # 释放媒体缓冲区
         write_log("yolo done", log_name=LOGNAME)

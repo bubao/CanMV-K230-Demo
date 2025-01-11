@@ -3,18 +3,28 @@ from src.services.wifi import test_wifi_connections
 from src.services.ntptime import sync_ntp
 from src.services.mqtt import MQTTPublish
 import os, time, utime, gc, ujson
-from src.yolo import initialize_pipeline, initialize_yolo, process_frame
+from services.yolo import initialize_pipeline, initialize_yolo, process_frame
 
 LOGNAME = "main"
 
 
-# 主函数
-# 1. 获取配置，根据配置选择初始化wifi连接，
-# 2. 只有wifi连接成功才能同步时间，
-# 3. 只有wifi连接成功才能初始化mqtt连接
-# 4. 运行yolo模型
-# 5. 第二步是否失败不影响执行，但是wifi和mqtt连接失败会导致yolo模型无法运行
 def main():
+    """
+    主函数初始化并运行带有MQTT通信的YOLO模型。
+
+    此函数执行以下步骤：
+    1. 加载配置。
+    2. 检查所需的配置（WiFi、YOLO、MQTT）是否存在并启用。
+    3. 测试WiFi连接。
+    4. 如果启用了NTP时间同步，则同步时间。
+    5. 初始化MQTT客户端并连接到MQTT代理。
+    6. 初始化YOLO模型和处理管道。
+    7. 每秒处理帧，进行目标检测，并将结果发送到MQTT代理。
+    8. 处理异常并确保资源的正确清理。
+
+    返回:
+        None
+    """
     # 获取配置
     success, config = load_config()
     if not success:

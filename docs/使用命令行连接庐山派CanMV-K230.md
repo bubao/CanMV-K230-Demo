@@ -91,13 +91,12 @@ ampy put <文件名> [目标路径]
 ampy get <文件名> > <本地文件名>
 ```
 
-## 使用 mip 安装第三方包
+## 添加 ntptime
 
-目前庐山派 CanMV-K230 固件并没有支持 mip，需要自己手动安装`mpremote`，再执行以下命令：
+立创庐山派固件缺少 `ntptime`，需要使用`mpremote`手动安装：
 
 ```bash
-pip install mpremote
-mpremote connect /dev/tty.usbmodem0010000001 mip --target="/sdcard/libs" install mip
+mpremote connect /dev/tty.usbmodem0010000001 mip --target="/sdcard/libs" install ntptime
 ```
 
 在 REPL 中，输入以下命令安装 mip：
@@ -117,7 +116,7 @@ screen -S K230 /dev/cu.usbmodem0010000001 115200
 
 要退出 screen 会话，可以按`Ctrl+A`，然后按`K`，最后按`Y`确认退出。
 
-> 每次进入都会 soft reset，可以按`Ctrl+D`手动 soft reset，如果正在运行，也可以用`Ctrl+D`终止运行
+> 每次进入都会 soft reset，可以按`Ctrl+D`手动 soft reset，如果正在运行，也可以用`Ctrl+C`终止运行。
 
 ## 常用命令
 

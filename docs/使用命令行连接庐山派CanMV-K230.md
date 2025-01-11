@@ -91,12 +91,13 @@ ampy put <文件名> [目标路径]
 ampy get <文件名> > <本地文件名>
 ```
 
-## 添加 ntptime
+## 添加依赖
 
-立创庐山派固件缺少 `ntptime`，需要使用`mpremote`手动安装：
+立创庐山派固件缺少 `ntptime`和`umqtt.simple`，需要使用`mpremote`手动安装：
 
 ```bash
-mpremote connect /dev/tty.usbmodem0010000001 mip --target="/sdcard/libs" install ntptime
+mpremote connect /dev/tty.usbmodem0010000001 mip install ntptime
+mpremote connect /dev/tty.usbmodem0010000001 mip install umqtt.simple
 ```
 
 在 REPL 中，输入以下命令安装 mip：

@@ -68,10 +68,11 @@ ampy put main.py /sdcard/main.py
 ampy put src /sdcard/src
 ```
 
-### 使用 mpremote 安装 ntptime
+### 使用 mpremote 安装依赖
 
 ```bash
 mpremote connect /dev/tty.usbmodem0010000001 mip install ntptime
+mpremote connect /dev/tty.usbmodem0010000001 mip install umqtt.simple
 ```
 
 ## 使用说明

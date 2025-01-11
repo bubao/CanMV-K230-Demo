@@ -59,7 +59,7 @@ def process_frame(yolo, pl, CONFIG):
 
     # 解析结果
     if len(result) == 0:
-        return [], fps
+        return [], fps, img  # 返回检测结果、FPS 和当前帧
 
     detections = []
     for item in result:
@@ -70,7 +70,7 @@ def process_frame(yolo, pl, CONFIG):
             "bbox": [float(item[0]), float(item[1]), float(item[2]), float(item[3])],
         }
         detections.append(detection)
-    return detections, fps
+    return detections, fps, img  # 返回检测结果、FPS 和当前帧
 
 
 def calculate_cycle_result(cycle_data, frame_index):

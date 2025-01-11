@@ -3,7 +3,7 @@ from src.services.wifi import test_wifi_connections
 from src.services.ntptime import sync_ntp
 from src.services.mqtt import MQTTPublish
 import os, time, utime, gc, ujson
-from services.yolo import initialize_pipeline, initialize_yolo, process_frame
+from src.services.yolo import initialize_pipeline, initialize_yolo, process_frame
 
 LOGNAME = "main"
 
@@ -56,6 +56,7 @@ def main():
             if ret is False:
                 return
             topic_detection = mqtt_config["topic_detection"]
+            mqtt_client_id = mqtt_config["client_id"]
             pl = initialize_pipeline(yolo_config)
             yolo = initialize_yolo(yolo_config)
 
@@ -65,7 +66,7 @@ def main():
                 current_time = utime.time()
                 if current_time - last_time >= 1:  # 每秒处理一帧
                     last_time = current_time
-                    res, fps = process_frame(yolo, pl, yolo_config)
+                    res, fps, frame = process_frame(yolo, pl, yolo_config)  # 获取当前帧
 
                     # 处理推理结果，准备发送到 MQTT
                     detection_data = []
@@ -82,12 +83,19 @@ def main():
                             detection_data.append(obj)
 
                         # 上报数据到 MQTT
-                        str_data = ujson.dumps(detection_data)
+                        str_data = ujson.dumps(
+                            {
+                                "data": detection_data,
+                                "image": frame,  # 包含当前帧的 base64 编码
+                                "client_id": mqtt_client_id,
+                            }
+                        )
+                        topic = topic_detection + "/" + mqtt_client_id
                         logging(
-                            f"send topic {topic_detection} data: {str_data}",
+                            f"send topic {topic} data: {detection_data}",
                             log_name=LOGNAME,
                         )
-                        mqtt_client.publish(topic_detection, str_data)
+                        mqtt_client.publish(topic, str_data)
                         gc.collect()
         except KeyboardInterrupt as e:
             print("用户停止: ", e)
@@ -101,6 +109,7 @@ def main():
             time.sleep_ms(100)
             # 释放媒体缓冲区
             logging("yolo done", log_name=LOGNAME)
+            return  # 添加缺少的 return 语句
 
     else:
         logging("No WiFi configurations enabled.", log_name=LOGNAME)

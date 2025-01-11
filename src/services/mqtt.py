@@ -42,9 +42,9 @@ class MQTTPublish:
     def publish(self, topic, message):
         """发布消息到指定的主题"""
         if not self.is_connected:
-            logging(
-                f"MQTT not connected. Unable to publish to {topic}", log_name=LOGNAME
-            )
+            # logging(
+            #     f"MQTT not connected. Unable to publish to {topic}", log_name=LOGNAME
+            # )
             return
 
         try:

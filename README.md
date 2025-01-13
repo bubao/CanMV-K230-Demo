@@ -162,7 +162,7 @@ ampy run <脚本名>
 **安装 mip 包**：
 
 ```bash
-mpremote connect /dev/tty.usbmodem0010000001 mip install <包名>
+mpremote connect /dev/tty.usbmodem0010000001 mip install <包名> --target="/sdcard/libs"
 ```
 
 **连接 REPL**：

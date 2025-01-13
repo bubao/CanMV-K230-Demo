@@ -96,8 +96,8 @@ ampy get <文件名> > <本地文件名>
 立创庐山派固件缺少 `ntptime`和`umqtt.simple`，需要使用`mpremote`手动安装：
 
 ```bash
-mpremote connect /dev/tty.usbmodem0010000001 mip install ntptime
-mpremote connect /dev/tty.usbmodem0010000001 mip install umqtt.simple
+mpremote connect /dev/tty.usbmodem0010000001 mip install ntptime --target="/sdcard/libs"
+mpremote connect /dev/tty.usbmodem0010000001 mip install umqtt.simple --target="/sdcard/libs"
 ```
 
 在 REPL 中，输入以下命令安装 mip：

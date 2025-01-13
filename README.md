@@ -31,6 +31,8 @@ brew install screen          # 对于 macOS 系统
 
 ### 配置连接庐山派 CanMV-K230
 
+**Mac**
+
 通过 USB 线将庐山派 CanMV-K230 连接到电脑，并找到设备的挂载位置：
 
 ```shell
@@ -46,10 +48,22 @@ Bus 001 Device 009: ID 1209:abd1 1209 CanMV  Serial: 001000000
 ls /dev/tty* | grep '001000000'
 ```
 
+**ubuntu**
+```bash
+
+~$ lsusb
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 002: ID 1209:abd1 InterBiometrics
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+~$ ls /dev/ttyA*
+/dev/ttyACM0
+
+```
+
 将结果添加当前目录下的 `.ampy` 文件中：
 
 ```plaintext
-AMPY_PORT=/dev/tty.usbmodem0010000001
+AMPY_PORT=/dev/tty.usbmodem0010000001 #/dev/ttyACM0
 AMPY_BAUD=115200
 AMPY_DELAY=0.5
 ```
@@ -70,10 +84,28 @@ ampy put src /sdcard/src
 
 ### 使用 mpremote 安装依赖
 
+**Mac**
 ```bash
-mpremote connect /dev/tty.usbmodem0010000001 mip install ntptime
-mpremote connect /dev/tty.usbmodem0010000001 mip install umqtt.simple
+mpremote connect /dev/tty.usbmodem0010000001 mip install --target /sdcard/libs ntptime
+mpremote connect /dev/tty.usbmodem0010000001 mip install --target /sdcard/libs umqtt.simple
 ```
+
+**windows**
+```bash
+mpremote connect COM12 mip install --target /sdcard/libs ntptime
+mpremote connect COM12 mip install --target /sdcard/libs umqtt.simple
+```
+
+**ubuntu**
+```bash
+mpremote connect /dev/ttyACM0 mip install --target /sdcard/libs ntptime
+mpremote connect /dev/ttyACM0 mip install --target /sdcard/libs umqtt.simple
+```
+
+**最终结果**
+
+![image](https://github.com/user-attachments/assets/ebdb30fe-3d0a-445b-9cc9-23184bce1108)
+
 
 ## 使用说明
 

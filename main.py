@@ -1,8 +1,9 @@
-from src.services.utils import logging, load_config
+from src.services.utils import logging, load_config, update_config
 from src.services.wifi import test_wifi_connections
 from src.services.ntptime import sync_ntp
 from src.services.mqtt import MQTTPublish
-import os, time, utime, gc, ujson
+from src.services.ap import WiFiAP
+import os, time, utime, gc, ujson, machine, uasyncio as asyncio
 from src.services.yolo import initialize_pipeline, initialize_yolo, process_frame
 
 LOGNAME = "main"
@@ -43,6 +44,7 @@ def main():
     ):
         logging("Config missing required fields, exiting...", log_name=LOGNAME)
         return
+
     if test_wifi_connections(wifi_config):
         # 联网成功
         if ntptime_config and ntptime_config.get("enabled", False):
@@ -112,8 +114,21 @@ def main():
             return  # 添加缺少的 return 语句
 
     else:
-        logging("No WiFi configurations enabled.", log_name=LOGNAME)
-        return False
+        try:
+            logging(
+                "No WiFi configurations enabled. Starting AP mode...", log_name=LOGNAME
+            )
+            ap = WiFiAP()
+            asyncio.run(ap.start())
+            # asyncio.run(ap.start_server())
+            ap.start_server()
+            # logging(
+            #     "AP mode started. Waiting for WiFi configuration...", log_name=LOGNAME
+            # )
+        except KeyboardInterrupt as e:
+            print("用户停止: ", e)
+        except BaseException as e:
+            print(f"异常: {e}")
 
 
 main()

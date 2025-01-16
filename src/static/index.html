@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi 配网</title>
+</head>
+<body>
+    <h1>WiFi 配网</h1>
+
+    <!-- 扫描到的 WiFi 信息 -->
+    <div>
+        <h2>扫描到的 WiFi 列表</h2>
+        <ul id="scanned-networks">
+            <!-- 动态加载扫描到的 WiFi -->
+        </ul>
+        <button id="add-from-scanned">从扫描的 WiFi 添加到配置</button>
+    </div>
+
+    <!-- 配置文件中的 WiFi 列表 -->
+    <div>
+        <h2>配置文件中的 WiFi 列表</h2>
+        <ul id="config-file-networks">
+            <!-- 动态加载配置文件中的 WiFi 配置 -->
+        </ul>
+        <button id="add-manually">手动添加 WiFi 配置</button>
+    </div>
+
+    <!-- 配置 WiFi 表单 -->
+    <div>
+        <h2>WiFi 配置表单</h2>
+        <form id="add-update-form">
+            <label for="ssid">SSID:</label><br>
+            <input type="text" id="ssid" name="ssid" required><br>
+            
+            <label for="password">密码 (可选):</label><br>
+            <input type="password" id="password" name="password"><br>
+            
+            <label for="enabled">启用:</label><br>
+            <select id="enabled" name="enabled">
+                <option value="true">启用</option>
+                <option value="false">禁用</option>
+            </select><br><br>
+
+            <button type="submit">提交</button>
+        </form>
+    </div>
+
+    <!-- 重启服务 -->
+    <div>
+        <h2>重启服务</h2>
+        <button id="reset-button">重启服务</button>
+    </div>
+
+    <script>
+        // 动态加载扫描到的 WiFi 列表
+        async function fetchScannedNetworks() {
+            try {
+                const response = await fetch('/api/scanned_networks');
+                const networks = await response.json();
+
+                const scannedList = document.getElementById('scanned-networks');
+                scannedList.innerHTML = '';
+
+                networks.forEach(ssid => {
+                    const li = document.createElement('li');
+                    li.textContent = ssid;
+
+                    // 添加 "添加到配置" 按钮
+                    const addButton = document.createElement('button');
+                    addButton.textContent = '添加到配置';
+                    addButton.onclick = () => prefillForm(ssid);
+                    li.appendChild(addButton);
+
+                    scannedList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('无法获取扫描到的 WiFi 列表:', error);
+            }
+        }
+
+        // 动态加载配置文件中的 WiFi 信息
+        async function fetchConfigFileNetworks() {
+            try {
+                const response = await fetch('/api/config_file_networks');
+                const config = await response.json();
+
+                const configList = document.getElementById('config-file-networks');
+                configList.innerHTML = '';
+
+                config.forEach(({ ssid, password, enabled }) => {
+                    const li = document.createElement('li');
+                    li.textContent = `SSID: ${ssid}, 密码: ${password || '无'}, 启用: ${enabled}`;
+
+                    // 删除按钮
+                    const deleteButton = document.createElement('button');
+                    deleteButton.textContent = '删除';
+                    deleteButton.onclick = () => deleteConfig(ssid);
+                    li.appendChild(deleteButton);
+
+                    // 更新按钮
+                    const updateButton = document.createElement('button');
+                    updateButton.textContent = '更新';
+                    updateButton.onclick = () => prefillForm(ssid, password, enabled);
+                    li.appendChild(updateButton);
+
+                    configList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('无法获取配置文件中的 WiFi 列表:', error);
+            }
+        }
+
+        // 预填表单
+        function prefillForm(ssid, password = '', enabled = true) {
+            document.getElementById('ssid').value = ssid;
+            document.getElementById('password').value = password;
+            document.getElementById('enabled').value = String(enabled);
+        }
+
+        // 提交 WiFi 配置表单
+        document.getElementById('add-update-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData.entries());
+            data.enabled = data.enabled ? 'true':'false'; // 转换为布尔值
+			console.log(JSON.stringify(data))
+            try {
+                const response = await fetch('/api/add_update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                alert(await response.text());
+                fetchConfigFileNetworks(); // 更新配置文件列表
+            } catch (error) {
+                console.error('提交 WiFi 配置失败:', error);
+            }
+        });
+
+        // 删除 WiFi 配置
+        async function deleteConfig(ssid) {
+            try {
+                const response = await fetch(`/api/delete/${ssid}`, { method: 'DELETE' });
+                alert(await response.text());
+                fetchConfigFileNetworks(); // 更新配置文件列表
+            } catch (error) {
+                console.error('删除 WiFi 配置失败:', error);
+            }
+        }
+
+        // 重启服务
+        document.getElementById('reset-button').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/reset', { method: 'POST' });
+                alert(await response.text());
+            } catch (error) {
+                console.error('重启服务失败:', error);
+            }
+        });
+
+        // 通过扫描列表添加 WiFi 配置
+        document.getElementById('add-from-scanned').addEventListener('click', () => {
+            const ssid = document.getElementById('ssid').value;
+            if (!ssid) {
+                alert("请选择要添加的 WiFi");
+                return;
+            }
+            prefillForm(ssid); // 预填表单
+        });
+
+        // 手动添加 WiFi 配置
+        document.getElementById('add-manually').addEventListener('click', () => {
+            document.getElementById('ssid').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('enabled').value = 'true';
+        });
+
+        // 初始化页面
+        fetchScannedNetworks();
+        fetchConfigFileNetworks();
+    </script>
+</body>
+</html>

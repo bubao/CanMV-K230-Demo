@@ -151,16 +151,17 @@ class WiFiAP:
                 print("Enabled:", enabled)
 
                 # 添加或更新 WiFi 配置
-                modify_wifi_network(ssid, password, enabled)
+                modify_wifi_network(ssid=ssid, new_password=password, enabled=enabled)
 
                 # 返回响应
                 response = "HTTP/1.1 200 OK\n\nWiFi 配置已添加或修改!"
                 conn.write(response.encode())  # 发送字节响应
                 conn.close()
+                return
 
             except Exception as e:
                 # JSON 解析失败时返回错误
-                print("e", e)
+                print(e)
                 response = "HTTP/1.1 400 Bad Request\n\nInvalid JSON format!"
                 conn.write(response.encode())  # 发送字节响应
                 conn.close()
@@ -192,6 +193,7 @@ class WiFiAP:
                     conn.write(response.encode())  # 发送字节响应
 
                 conn.close()
+                return
 
             except Exception as e:
                 # JSON 解析失败时返回错误

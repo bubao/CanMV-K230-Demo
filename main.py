@@ -129,6 +129,9 @@ def main():
             print("用户停止: ", e)
         except BaseException as e:
             print(f"异常: {e}")
+        finally:
+            if ap:
+                ap.stop()
 
 
 main()

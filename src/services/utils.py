@@ -77,34 +77,35 @@ def remove_wifi_network(ssid, config_path="/sdcard/.config.json"):
 
 def modify_wifi_network(
     ssid,
-    new_ssid=None,
     new_password=None,
     enabled=True,
     config_path="/sdcard/.config.json",
 ):
-    """修改WiFi网络配置"""
-    success, config = load_config(config_path)
-    if not success:
+    try:
+        """修改WiFi网络配置"""
+        success, config = load_config(config_path)
+        if not success:
+            return False
+
+        is_modify = False
+        for net in config["wifi"]["networks"]:
+            if net["ssid"] == ssid:
+                if new_password:
+                    net["password"] = new_password
+                net["enabled"] = enabled
+                is_modify = True
+                break
+
+        # 如果没有修改现有网络配置，则添加新的网络
+        if not is_modify:
+            new_network = {"enabled": enabled, "ssid": ssid, "password": new_password}
+            config["wifi"]["networks"].append(new_network)
+
+        # 保存修改后的配置
+        return save_config(config, config_path)
+    except Exception as e:
+        logging.error(f"Error modify_wifi_network : {e}")
         return False
-
-    is_modify = False
-    for net in config["wifi"]["networks"]:
-        if net["ssid"] == ssid:
-            if new_ssid:
-                net["ssid"] = new_ssid
-            if new_password:
-                net["password"] = new_password
-            net["enabled"] = enabled
-            is_modify = True
-            break
-
-    # 如果没有修改现有网络配置，则添加新的网络
-    if not is_modify:
-        new_network = {"enabled": enabled, "ssid": ssid, "password": new_password}
-        config["wifi"]["networks"].append(new_network)
-
-    # 保存修改后的配置
-    return save_config(config, config_path)
 
 
 def save_config(config, config_path="/sdcard/.config.json"):

@@ -124,8 +124,8 @@
 
             const formData = new FormData(event.target);
             const data = Object.fromEntries(formData.entries());
-            data.enabled = data.enabled ? 'true':'false'; // 转换为布尔值
-			console.log(JSON.stringify(data))
+            data.enabled = data.enabled == 'true'; // 转换为布尔值
+            console.log(JSON.stringify(data))
             try {
                 const response = await fetch('/api/add_update', {
                     method: 'POST',

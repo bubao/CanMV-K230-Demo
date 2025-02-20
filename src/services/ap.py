@@ -7,8 +7,6 @@ import json
 
 # from .dns import DNSServer
 from .utils import (
-    update_config,
-    add_wifi_network,
     remove_wifi_network,
     modify_wifi_network,
     get_wifi_network,
@@ -16,8 +14,14 @@ from .utils import (
 
 
 class WiFiAP:
-    def __init__(self, ssid=None, password=None):
+    def __init__(self, ssid: str = None, password: str = None):
+        """
+        初始化WiFi AP类，管理SSID和密码设置
 
+        Args:
+            ssid (str): 要设置的无线网络名称，如果未提供将自动生成一个唯一的ssid
+            password (str): 要设置的无线网络密码，如果未提供将使用默认密码"12345678"
+        """
         self.sta = network.WLAN(network.STA_IF)
         # 初始化WiFi AP类，设置SSID和密码
         existing_ssids = self.scan_networks()
@@ -38,7 +42,13 @@ class WiFiAP:
         self.sta.active(False)
         self.ap = network.WLAN(network.AP_IF)
 
-    def scan_networks(self):
+    def scan_networks(self) -> list[str]:
+        """
+        扫描并获取可用的WiFi网络列表
+
+        Returns:
+            list[str]: 可用网络SSID列表，不包括隐藏网络
+        """
         # 忽略设置活动状态的步骤
         try:
             self.sta.active(True)
@@ -70,8 +80,13 @@ class WiFiAP:
 
         return ssids
 
-    async def start(self):
-        # 启动AP模式并配置SSID和密码
+    async def start(self) -> None:
+        """
+        启动AP模式并配置SSID和密码
+
+        Returns:
+            None
+        """
         try:
             self.sta.active(True)
         except AttributeError as e:
@@ -97,13 +112,26 @@ class WiFiAP:
         # self.dns_server = DNSServer("192.168.4.1")
         # await asyncio.create_task(self.dns_server.start())  # 异步启动DNS服务器
 
-    def stop(self):
-        # 停止AP模式
+    def stop(self) -> None:
+        """
+        停止AP模式
+
+        Returns:
+            None
+        """
         self.ap.active(False)
         print("AP stopped")
 
-    def handle_client(self, conn):
-        # 处理客户端请求
+    def handle_client(self, conn: socket.socket) -> None:
+        """
+        处理客户端HTTP请求
+
+        Args:
+            conn (socket.socket): 客户端连接对象
+
+        Returns:
+            None
+        """
         request = conn.read()
 
         if request is None:

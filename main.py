@@ -48,7 +48,7 @@ def main():
     if test_wifi_connections(wifi_config):
         # 联网成功
         if ntptime_config and ntptime_config.get("enabled", False):
-            sync_ntp(ntptime_config)
+            sync_ntp()
 
         # 初始化 MQTT 连接并运行 YOLO 模型
         try:

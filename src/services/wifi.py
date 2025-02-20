@@ -8,7 +8,16 @@ LOGNAME = "wifi"
 
 
 # WiFi 连接测试函数
-def connect_wifi(ssid, password):
+def connect_wifi(ssid: str, password: str) -> tuple[bool, str]:
+    """连接到指定的WiFi网络
+    参数:
+        ssid: 需要连接的WiFissid字符串
+        password: 对应的wifi密码字符串
+    返回值:
+        (success: bool, ip_address: str)
+        success为True表示连接成功，ip_address是获取到的IP地址
+        如果连接失败，返回(False, "0.0.0.0")
+    """
     sta = network.WLAN(network.STA_IF)  # 创建 WLAN 对象
     ip_address = None
     if not sta.active():
@@ -57,7 +66,13 @@ def connect_wifi(ssid, password):
 
 
 # 读取配置并循环尝试连接
-def test_wifi_connections(wifi_configs):
+def test_wifi_connections(wifi_configs: dict) -> bool:
+    """测试可用的WiFi连接，按顺序尝试连接
+    参数:
+        wifi_configs: 包含多个WiFi配置的字典列表
+    返回值:
+        bool: 连接成功返回True，否则False
+    """
     if wifi_configs:
         for config in wifi_configs.get("networks", []):
             ssid = config.get("ssid")

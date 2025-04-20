@@ -122,9 +122,9 @@ class WiFiAP:
         self.ap.active(False)
         print("AP stopped")
 
-    def handle_client(self, conn: socket.socket) -> None:
+    async def handle_client_async(self, conn: socket.socket) -> None:
         """
-        处理客户端HTTP请求
+        异步处理客户端HTTP请求
 
         Args:
             conn (socket.socket): 客户端连接对象
@@ -132,124 +132,138 @@ class WiFiAP:
         Returns:
             None
         """
-        request = conn.read()
-
-        if request is None:
-            return
-        print("Request:", request)
-
-        if "GET /api/scanned_networks" in request:
-            # 获取扫描到的 WiFi 配置信息
-            wifi_config = self.existing_ssids
-            response = (
-                "HTTP/1.1 200 OK\nContent-Type: application/json\n\n"
-                + json.dumps(wifi_config)
-            )
-            conn.write(response)
-            conn.close()
-            return
-
-        if "GET /api/config_file_networks" in request:
-            # 获取配置文件中的 WiFi 配置信息
-            config_file_networks = get_wifi_network()
-            response = (
-                "HTTP/1.1 200 OK\nContent-Type: application/json\n\n"
-                + json.dumps(config_file_networks)
-            )
-            conn.write(response)
-            conn.close()
-            return
-
-        # 处理 POST 请求 /api/add_update
-        if "POST /api/add_update" in request:
-            # 提取请求体部分
-            body_start = request.find(b"\r\n\r\n") + 4  # 定位到请求体的开始
-            body = request[body_start:]  # 获取请求体内容
-            print("Request body:", body)
-
-            try:
-                # 解析 JSON 请求体
-                data = json.loads(body)
-                ssid = data.get("ssid")
-                password = data.get("password")
-                enabled = data.get("enabled")
-
-                print("Received SSID:", ssid)
-                print("Received Password:", password)
-                print("Enabled:", enabled)
-
-                # 添加或更新 WiFi 配置
-                modify_wifi_network(ssid=ssid, new_password=password, enabled=enabled)
-
-                # 返回响应
-                response = "HTTP/1.1 200 OK\n\nWiFi 配置已添加或修改!"
-                conn.write(response.encode())  # 发送字节响应
+        try:
+            request = conn.recv(1024)
+            if not request:
                 conn.close()
                 return
 
-            except Exception as e:
-                # JSON 解析失败时返回错误
-                print(e)
-                response = "HTTP/1.1 400 Bad Request\n\nInvalid JSON format!"
-                conn.write(response.encode())  # 发送字节响应
+            print("Request:", request)
+
+            if "GET /api/scanned_networks" in request:
+                # 获取扫描到的 WiFi 配置信息
+                wifi_config = self.existing_ssids
+                response = (
+                    "HTTP/1.1 200 OK\nContent-Type: application/json\n\n"
+                    + json.dumps(wifi_config)
+                )
+                conn.sendall(response)
                 conn.close()
                 return
 
-        if "DELETE /api/delete" in request:
-            # 提取请求体部分
-            body_start = request.find(b"\r\n\r\n") + 4  # 定位到请求体的开始
-            body = request[body_start:]  # 获取请求体内容
-            print("Request body:", body)
+            if "GET /api/config_file_networks" in request:
+                # 获取配置文件中的 WiFi 配置信息
+                config_file_networks = get_wifi_network()
+                response = (
+                    "HTTP/1.1 200 OK\nContent-Type: application/json\n\n"
+                    + json.dumps(config_file_networks)
+                )
+                conn.sendall(response)
+                conn.close()
+                return
 
-            try:
-                # 解析 JSON 请求体
-                data = json.loads(body)
-                ssid = data.get("ssid")
+            # 处理 POST 请求 /api/add_update
+            if "POST /api/add_update" in request:
+                # 提取请求体部分
+                body_start = request.find(b"\r\n\r\n") + 4  # 定位到请求体的开始
+                body = request[body_start:]  # 获取请求体内容
+                print("Request body:", body)
 
-                if ssid:
-                    print("Received SSID to remove:", ssid)
+                try:
+                    # 解析 JSON 请求体
+                    data = json.loads(body)
+                    ssid = data.get("ssid")
+                    password = data.get("password")
+                    enabled = data.get("enabled")
 
-                    # 删除WiFi网络配置
-                    remove_wifi_network(ssid)
+                    print("Received SSID:", ssid)
+                    print("Received Password:", password)
+                    print("Enabled:", enabled)
+
+                    # 添加或更新 WiFi 配置
+                    modify_wifi_network(
+                        ssid=ssid, new_password=password, enabled=enabled
+                    )
 
                     # 返回响应
-                    response = "HTTP/1.1 200 OK\n\nWiFi 配置已删除!"
-                    conn.write(response.encode())  # 发送字节响应
-                else:
-                    # 如果没有提供 SSID，返回错误响应
-                    response = "HTTP/1.1 400 Bad Request\n\nSSID is required!"
-                    conn.write(response.encode())  # 发送字节响应
+                    response = "HTTP/1.1 200 OK\n\nWiFi 配置已添加或修改!"
+                    conn.sendall(response.encode())  # 发送字节响应
+                    conn.close()
+                    return
 
+                except Exception as e:
+                    # JSON 解析失败时返回错误
+                    print(e)
+                    response = "HTTP/1.1 400 Bad Request\n\nInvalid JSON format!"
+                    conn.sendall(response.encode())  # 发送字节响应
+                    conn.close()
+                    return
+
+            if "DELETE /api/delete" in request:
+                # 提取请求体部分
+                body_start = request.find(b"\r\n\r\n") + 4  # 定位到请求体的开始
+                body = request[body_start:]  # 获取请求体内容
+                print("Request body:", body)
+
+                try:
+                    # 解析 JSON 请求体
+                    data = json.loads(body)
+                    ssid = data.get("ssid")
+
+                    if ssid:
+                        print("Received SSID to remove:", ssid)
+
+                        # 删除WiFi网络配置
+                        remove_wifi_network(ssid)
+
+                        # 返回响应
+                        response = "HTTP/1.1 200 OK\n\nWiFi 配置已删除!"
+                        conn.sendall(response.encode())  # 发送字节响应
+                    else:
+                        # 如果没有提供 SSID，返回错误响应
+                        response = "HTTP/1.1 400 Bad Request\n\nSSID is required!"
+                        conn.sendall(response.encode())  # 发送字节响应
+
+                    conn.close()
+                    return
+
+                except Exception as e:
+                    # JSON 解析失败时返回错误
+                    response = "HTTP/1.1 400 Bad Request\n\nInvalid JSON format!"
+                    conn.sendall(response.encode())  # 发送字节响应
+                    conn.close()
+                    return
+
+            if "POST /reset" in request:
+                print("Received reset request")
+                response = "HTTP/1.1 200 OK\n\nSystem will reset!"
+                conn.sendall(response.encode())
                 conn.close()
+                machine.reset()  # 重置系统
                 return
 
+            # 读取 /sdcard/src/static/index.html 文件并返回
+            try:
+                with open("/sdcard/src/static/index.html", "r") as html_file:
+                    html_content = html_file.read()
+                response = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n" + html_content
             except Exception as e:
-                # JSON 解析失败时返回错误
-                response = "HTTP/1.1 400 Bad Request\n\nInvalid JSON format!"
-                conn.write(response.encode())  # 发送字节响应
-                conn.close()
-                return
+                response = f"HTTP/1.1 500 Internal Server Error\n\nFailed to read HTML file: {str(e)}"
 
-        if "POST /reset" in request:
-            print("Received reset request")
-            response = "HTTP/1.1 200 OK\n\nSystem will reset!"
-            conn.write(response)
+            conn.sendall(response)
             conn.close()
-            machine.reset()  # 重置系统
-            return
 
-        # 读取 /sdcard/src/static/index.html 文件并返回
-        try:
-            with open("/sdcard/src/static/index.html", "r") as html_file:
-                html_content = html_file.read()
-            response = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n" + html_content
         except Exception as e:
-            response = f"HTTP/1.1 500 Internal Server Error\n\nFailed to read HTML file: {str(e)}"
+            print("Error handling client:", e)
+            conn.close()
 
-        conn.write(response)
-        conn.close()
+    async def start_server(self) -> None:
+        """
+        启动HTTP服务器
 
-    def start_server(self, micropython_optimize=True):
+        Returns:
+            None
+        """
         s = socket.socket()
         ai = socket.getaddrinfo("0.0.0.0", 80)
         addr = ai[0][-1]
@@ -260,18 +274,14 @@ class WiFiAP:
 
         while True:
             try:
-                print("xxx aaa")
                 res = s.accept()
                 client_sock = res[0]
                 client_addr = res[1]
-                client_sock.setblocking(True)  # 设置非阻塞模式
-                client_sock.settimeout(1)
+                client_sock.setblocking(True)  # 设置阻塞模式
                 print("Client connected from", client_addr)
 
-                client_stream = (
-                    client_sock if micropython_optimize else client_sock.makefile("rwb")
-                )
-                self.handle_client(client_stream)
+                # 创建一个任务来处理客户端请求
+                asyncio.create_task(self.handle_client_async(client_sock))
             except OSError as e:
                 print("Error accepting connection:", e)
             except Exception as e:
